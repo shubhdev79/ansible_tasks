@@ -1,0 +1,36 @@
+---
+- name: S & P discovery
+  hosts:  localhost #"{{ your_target_host }}"
+  gather_facts: true
+  become: true
+
+  tasks:
+    - name: List all running services
+      shell: systemctl list-units --type=service --state=running --no-pager --plain | awk '{print $1}' | grep -E "service+" | cut -d "." -f 1
+      register: running_services
+
+    - name: Display the report
+      debug:
+        var: running_services
+
+    - name: List Packages
+      shell: "rpm -qf $(which {{ item }}) | sort"
+      with_items: "{{ running_services.stdout_lines }}"
+      register: packages
+
+    - name: Display Packages
+      debug: "msg={{ packages.results | map(attribute='stdout') | list }}"
+      register: listed_packages
+
+
+    - name: Associated Packages with Services
+      set_fact: 
+         concatendated_output: ["{{ running_services.stdout_lines }}", "{{ listed_packages.msg }}" ]
+
+    - name: Display Output
+      debug:
+        var: concatendated_output
+
+    - name:
+      set_fact:
+        service_package_list: 
